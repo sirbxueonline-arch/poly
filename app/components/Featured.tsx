@@ -293,32 +293,110 @@ function FeaturedChart({
   color: string;
 }) {
   const yesPrice = market.prices[0];
-  // Build a 7-point synthetic series anchored to the current price.
-  // Real-time chart data would replace this; the design calls for a dark line
-  // chart with current-price overlay.
   const points = useSyntheticSeries(market.id, yesPrice);
-  const pathD = pointsToPath(points, 360, 220);
-  const fillD = `${pathD} L360,220 L0,220 Z`;
+  // SVG drawing area — leave 32px on the right for axis labels.
+  const W = 360;
+  const H = 220;
+  const chartW = W - 36;
+  const pathD = pointsToPath(points, chartW, H);
+  const fillD = `${pathD} L${chartW},${H} L0,${H} Z`;
+  const cents = Math.round(yesPrice * 100);
+
+  // Y-axis ticks at the actual price + 50% mid + 0%/100% bookends
+  const ticks = [0, 50, cents, 100]
+    .filter((v, i, arr) => arr.indexOf(v) === i) // dedupe
+    .sort((a, b) => b - a);
+
+  // Find the last (rightmost) point coordinates so we can drop a glowing dot
+  const lastX = chartW;
+  const lastY = (1 - yesPrice) * H * 0.85 + H * 0.05;
+  const uniqueId = market.id;
+  const gradId = `feat-fill-${uniqueId}`;
+  const glowId = `feat-glow-${uniqueId}`;
 
   return (
     <div
       className="relative flex-1 overflow-hidden rounded-xl"
       style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        minHeight: 200,
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.2)",
+        minHeight: 220,
       }}
     >
       <svg
         width="100%"
-        height={220}
-        viewBox="0 0 360 220"
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="block"
       >
-        <path d={fillD} fill={`${color}18`} />
-        <path d={pathD} fill="none" stroke={`${color}90`} strokeWidth={2.5} />
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+          <filter id={glowId}>
+            <feGaussianBlur stdDeviation="2" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        {/* Horizontal grid lines */}
+        {[0.25, 0.5, 0.75].map((p) => (
+          <line
+            key={p}
+            x1={0}
+            x2={chartW}
+            y1={H * p}
+            y2={H * p}
+            stroke="rgba(255,255,255,0.04)"
+            strokeWidth={1}
+          />
+        ))}
+        {/* Filled area */}
+        <path d={fillD} fill={`url(#${gradId})`} />
+        {/* Line */}
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter={`url(#${glowId})`}
+        />
+        {/* Last-point dot */}
+        <circle
+          cx={lastX}
+          cy={lastY}
+          r={4}
+          fill={color}
+          filter={`url(#${glowId})`}
+        />
+        <circle cx={lastX} cy={lastY} r={2} fill="#fff" />
       </svg>
+      {/* Right-side y-axis ticks */}
+      <div className="pointer-events-none absolute inset-y-0 right-1.5 flex flex-col justify-between py-3 text-right">
+        {ticks.map((t) => (
+          <span
+            key={t}
+            className="mono text-[9px]"
+            style={{
+              color:
+                t === cents ? color : "rgba(255,255,255,0.25)",
+              fontWeight: t === cents ? 700 : 500,
+            }}
+          >
+            {t}%
+          </span>
+        ))}
+      </div>
+      {/* POLYMARKET LIVE chip */}
       <div className="absolute left-3 top-2.5 flex items-center gap-1.5">
         <div
           aria-hidden
@@ -330,23 +408,27 @@ function FeaturedChart({
         />
         <span
           className="mono text-[9px] tracking-[0.14em]"
-          style={{ color: "rgba(255,255,255,0.28)" }}
+          style={{ color: "rgba(255,255,255,0.55)" }}
         >
           POLYMARKET LIVE
         </span>
       </div>
-      <div className="absolute right-3.5 top-[40%] text-right">
+      {/* CURRENT price block */}
+      <div className="absolute right-12 top-3 text-right">
         <div
-          className="mono text-[28px] font-extrabold"
-          style={{ color }}
+          className="mono text-[34px] font-extrabold leading-none"
+          style={{
+            color,
+            textShadow: `0 0 24px ${color}55`,
+          }}
         >
-          {Math.round(yesPrice * 100)}¢
+          {cents}¢
         </div>
         <div
-          className="mono text-[9px] tracking-[0.12em]"
-          style={{ color: "rgba(255,255,255,0.28)" }}
+          className="mono mt-1 text-[9px] tracking-[0.14em]"
+          style={{ color: "rgba(255,255,255,0.4)" }}
         >
-          CURRENT
+          CURRENT · YES
         </div>
       </div>
     </div>
