@@ -123,6 +123,70 @@ export function CompactRow({ market, rank, prediction }: Props) {
       >
         {formatHours(hours)}
       </span>
+      {/* Mini sparkline — design spec calls for 52×26 deterministic chart */}
+      <MiniSpark
+        yesPrice={yesPrice}
+        color={isPass ? "#a8a29e" : color}
+        seed={market.id}
+      />
     </motion.div>
+  );
+}
+
+function MiniSpark({
+  yesPrice,
+  color,
+  seed,
+}: {
+  yesPrice: number;
+  color: string;
+  seed: string;
+}) {
+  const W = 52;
+  const H = 26;
+  const N = 8;
+  // Deterministic series ending at yesPrice
+  const hash = (() => {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) {
+      h = (h << 5) - h + seed.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h);
+  })();
+  const points: number[] = [];
+  let v = Math.max(0.05, Math.min(0.95, yesPrice + (((hash % 31) - 15) / 100)));
+  for (let i = 0; i < N; i++) {
+    if (i === N - 1) {
+      v = yesPrice;
+    } else {
+      const noise = (((hash + i * 17) % 19) - 9) / 200;
+      v = Math.max(0.02, Math.min(0.98, v + (yesPrice - v) * 0.22 + noise));
+    }
+    points.push(v);
+  }
+  const step = W / (N - 1);
+  const top = H * 0.15;
+  const bottom = H * 0.85;
+  const span = bottom - top;
+  const d = points
+    .map((p, i) => {
+      const x = (i * step).toFixed(1);
+      const y = (top + (1 - p) * span).toFixed(1);
+      return `${i === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+  const fillD = `${d} L${W},${H} L0,${H} Z`;
+  return (
+    <div
+      className="shrink-0 overflow-hidden rounded"
+      style={{ width: W, height: H, background: "#f4f3f0" }}
+      aria-hidden
+    >
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block">
+        <path d={fillD} fill={`${color}18`} />
+        <path d={d} fill="none" stroke={`${color}c0`} strokeWidth={1.5} strokeLinecap="round" />
+      </svg>
+    </div>
   );
 }
