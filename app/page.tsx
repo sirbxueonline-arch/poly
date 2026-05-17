@@ -13,6 +13,7 @@ import {
 import { Featured } from "./components/Featured";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { LoadingGrid } from "./components/LoadingGrid";
 import { MarketCard } from "./components/MarketCard";
 import { PulseTake } from "./components/PulseTake";
 import { SectionDivider } from "./components/SectionDivider";
@@ -463,31 +464,100 @@ export default function Page() {
           className="max-w-[460px] text-[15px] leading-[1.6]"
           style={{ color: "var(--muted)" }}
         >
-          {visibleMarkets.length} live prediction markets scored for momentum,
-          edge, and AI conviction. Prices live; AI refresh every 5 min.
+          {markets.length === 0
+            ? "Loading prediction markets…"
+            : `${visibleMarkets.length} live prediction markets scored for momentum, edge, and AI conviction.`}{" "}
+          Prices live; AI refresh every 5 min.
         </p>
       </div>
 
       {setupNotice && (
-        <div className="mx-auto max-w-[1200px] px-8 pb-5">
+        <div className="mx-auto max-w-[1200px] px-8 pb-6">
           <div
-            className="flex flex-col gap-2 rounded-xl px-5 py-4"
+            className="overflow-hidden rounded-2xl"
             style={{
               background: "var(--amber-bg)",
-              border: "1px solid rgba(180,83,9,0.25)",
+              border: "1px solid rgba(180,83,9,0.3)",
+              borderTop: "3px solid var(--amber)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(180,83,9,0.08)",
             }}
           >
-            <div
-              className="mono text-[10px] font-bold tracking-[0.16em]"
-              style={{ color: "var(--amber)" }}
-            >
-              SUPABASE NOT CONFIGURED
-            </div>
-            <div className="text-[13px] leading-[1.55]" style={{ color: "var(--text)" }}>
-              {setupNotice}
-            </div>
-            <div className="mono text-[11px]" style={{ color: "var(--muted)" }}>
-              See <code>supabase/schema.sql</code> in the project root.
+            <div className="px-6 py-5 sm:px-7 sm:py-6">
+              <div
+                className="mono mb-2 text-[11px] font-extrabold tracking-[0.18em]"
+                style={{ color: "var(--amber)" }}
+              >
+                ⚙ SETUP REQUIRED · SUPABASE NOT CONFIGURED
+              </div>
+              <h3
+                className="mb-3 text-[20px] font-bold leading-tight"
+                style={{ color: "var(--text)" }}
+              >
+                The dashboard needs a database to remember AI predictions
+                across reloads.
+              </h3>
+              <ol
+                className="mb-4 list-decimal space-y-1.5 pl-5 text-[13.5px] leading-[1.55]"
+                style={{ color: "var(--text)" }}
+              >
+                <li>
+                  Create a project at{" "}
+                  <a
+                    href="https://supabase.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline-offset-2 hover:underline"
+                    style={{ color: "var(--amber)" }}
+                  >
+                    supabase.com
+                  </a>
+                  .
+                </li>
+                <li>
+                  Open the SQL editor and run{" "}
+                  <code
+                    className="rounded px-1 py-0.5 text-[12px]"
+                    style={{
+                      background: "rgba(255,255,255,0.6)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    supabase/schema.sql
+                  </code>{" "}
+                  from this repo.
+                </li>
+                <li>
+                  Add these to{" "}
+                  <code
+                    className="rounded px-1 py-0.5 text-[12px]"
+                    style={{
+                      background: "rgba(255,255,255,0.6)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    .env.local
+                  </code>{" "}
+                  and restart the dev server:
+                </li>
+              </ol>
+              <pre
+                className="mono overflow-x-auto rounded-lg p-3 text-[12px] leading-[1.6]"
+                style={{
+                  background: "var(--text)",
+                  color: "rgba(255,255,255,0.9)",
+                }}
+              >
+                {`SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...`}
+              </pre>
+              <p
+                className="mono mt-3 text-[11px]"
+                style={{ color: "var(--muted)" }}
+              >
+                Get both from Supabase → Settings → API. Use the
+                service-role key, not anon.
+              </p>
             </div>
           </div>
         </div>
@@ -519,6 +589,11 @@ export default function Page() {
         density={density}
         onDensityChange={setDensity}
       />
+
+      {/* Loading skeleton — first paint, before any markets have arrived */}
+      {!isError && markets.length === 0 && !setupNotice && (
+        <LoadingGrid count={9} />
+      )}
 
       {/* Featured card */}
       {featured && (
