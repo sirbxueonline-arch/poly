@@ -1,26 +1,220 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-alt: #fcfbf8;
+  --border: #e6e3dc;
+  --border-strong: #d6d3c9;
+  --text: #0a0a0a;
+  --muted: #52525b;
+  --faint: #71717a;
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --yes: #047857;
+  --yes-bg: #d1fae5;
+  --no: #b91c1c;
+  --no-bg: #fee2e2;
+  --pass: #71717a;
+  --pass-bg: #f4f4f5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-yes: var(--yes);
+  --color-no: var(--no);
+  --color-pass: var(--pass);
+  --color-amber: var(--amber);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), "Geist", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mono {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace,
+    SFMono-Regular, Menlo, Consolas, monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Pulse animation used across header live dot, urgent indicators, polymarket-live label */
+@keyframes ppulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes ppulse-amber {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(180, 83, 9, 0);
+  }
+}
+
+@keyframes ppulse-rose {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(185, 28, 28, 0);
+  }
+}
+
+.ppulse {
+  animation: ppulse 2s infinite;
+}
+.ppulse-amber {
+  animation: ppulse-amber 2s infinite;
+}
+.ppulse-rose {
+  animation: ppulse-rose 1.5s infinite;
+}
+
+/* Card surface — base style for market cards */
+.market-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbf8 100%);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 14px -2px rgba(0, 0, 0, 0.08),
+    0 16px 32px -8px rgba(0, 0, 0, 0.06);
+  transition:
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+.market-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 8px 24px -4px rgba(0, 0, 0, 0.12),
+    0 24px 48px -12px rgba(0, 0, 0, 0.1);
+}
+
+/* "Fresh prediction" sweep — fires when AI delivers a new verdict */
+@keyframes verdict-fresh {
+  0% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 0 0 2px rgba(16, 185, 129, 0.5),
+      0 0 24px rgba(16, 185, 129, 0.25);
+  }
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 4px 14px -2px rgba(0, 0, 0, 0.08),
+      0 16px 32px -8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.verdict-fresh {
+  animation: verdict-fresh 1.6s ease-out;
+}
+
+/* Certainty-bar pulse — bumps the bar segments when AI updates */
+@keyframes certainty-pulse {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+  30% {
+    filter: brightness(1.18) saturate(1.25);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+.certainty-pulse {
+  animation: certainty-pulse 1.2s ease-out;
+}
+
+/* Skeleton shimmer kept for prediction-loading placeholders */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid rgba(180, 83, 9, 0.55);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b4a9;
 }
