@@ -169,22 +169,23 @@ export function Featured({ market, prediction, category }: Props) {
                 style={{ borderLeft: `3px solid ${color}45` }}
               >
                 <div
-                  className="mono mb-2 text-[9px] tracking-[0.16em]"
-                  style={{ color: "rgba(255,255,255,0.22)" }}
+                  className="mono mb-2 text-[9px] font-bold tracking-[0.18em]"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
                 >
                   AI THESIS
                 </div>
                 {splitThesis(prediction.thesis).map((line, i, arr) => (
                   <p
                     key={i}
-                    className="text-[13px] leading-[1.7]"
+                    className="text-[13.5px] leading-[1.65]"
                     style={{
                       color:
                         i === 1
-                          ? "rgba(255,255,255,0.62)"
-                          : "rgba(255,255,255,0.4)",
+                          ? "rgba(255,255,255,0.92)"
+                          : "rgba(255,255,255,0.7)",
                       fontStyle: i === 1 ? "italic" : "normal",
-                      marginBottom: i < arr.length - 1 ? 7 : 0,
+                      fontWeight: i === 1 ? 500 : 400,
+                      marginBottom: i < arr.length - 1 ? 8 : 0,
                     }}
                   >
                     {line}
@@ -225,14 +226,14 @@ export function Featured({ market, prediction, category }: Props) {
               />
             </div>
 
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <button
                 type="button"
-                className="flex-1 cursor-pointer rounded-lg py-[9px] text-[12px]"
+                className="flex-1 cursor-pointer rounded-lg py-[11px] text-[12.5px] font-medium transition-colors"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.55)",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.85)",
                 }}
               >
                 Why this? →
@@ -241,11 +242,12 @@ export function Featured({ market, prediction, category }: Props) {
                 href={polymarketUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 cursor-pointer rounded-lg py-[9px] text-center text-[12px] no-underline"
+                className="flex-1 cursor-pointer rounded-lg py-[11px] text-center text-[12.5px] font-semibold no-underline transition-transform hover:scale-[1.02]"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.55)",
+                  background: `linear-gradient(180deg, ${color}, ${color}d0)`,
+                  border: `1px solid ${color}`,
+                  color: "#fff",
+                  boxShadow: `0 4px 16px ${color}40, inset 0 1px 0 rgba(255,255,255,0.18)`,
                 }}
               >
                 Open Polymarket ↗

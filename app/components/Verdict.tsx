@@ -162,6 +162,14 @@ export function Verdict({
                   color,
                   letterSpacing: "-0.02em",
                   textWrap: "balance" as never,
+                  // Soft directional glow — extra punch on dark featured cards,
+                  // subtle on light comfort cards.
+                  textShadow:
+                    !isPass && dark
+                      ? `0 0 28px ${color}88, 0 0 4px ${color}33`
+                      : !isPass
+                        ? `0 0 12px ${color}22`
+                        : undefined,
                 }}
                 title={headline}
               >
