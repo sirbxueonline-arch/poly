@@ -1,7 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-
 type Props = {
   text: string | null;
   loading: boolean;
@@ -11,6 +9,11 @@ type Props = {
   attribution?: string | null;
 };
 
+/**
+ * Editorial pulse-take banner — dark "PULSE / TAKE" tile on the left, body
+ * text on the right. No framer-motion — we hit the same opacity-0-stuck bug
+ * with the original animated implementation. Pure CSS for any motion.
+ */
 export function PulseTake({
   text,
   loading,
@@ -21,10 +24,7 @@ export function PulseTake({
 
   return (
     <div className="mx-auto max-w-[1200px] px-8 pb-5">
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
+      <div
         className="flex items-stretch overflow-hidden rounded-xl"
         style={{
           background: "#ffffff",
@@ -34,7 +34,7 @@ export function PulseTake({
             "inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(15,15,15,0.06)",
         }}
       >
-        {/* Dark left tile — explicit hex so CSS-var indirection can't fail */}
+        {/* Dark left tile */}
         <div
           className="relative flex shrink-0 flex-col items-center justify-center px-5 py-4"
           style={{
@@ -66,67 +66,51 @@ export function PulseTake({
 
         {/* Body */}
         <div className="min-w-0 flex-1 px-6 py-5">
-          <AnimatePresence mode="wait" initial={false}>
-            {hasText ? (
-              <motion.div
-                key={text}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.25 }}
+          {hasText ? (
+            <>
+              <p
+                className="text-[16px] font-medium leading-[1.5]"
+                style={{ color: "#0a0a0a" }}
               >
-                <p
-                  className="text-[16px] font-medium leading-[1.5]"
-                  style={{ color: "#0a0a0a" }}
-                >
-                  <span
-                    aria-hidden
-                    className="mr-0.5"
-                    style={{ color: "#b45309" }}
-                  >
-                    “
-                  </span>
-                  {text}
-                  <span
-                    aria-hidden
-                    className="ml-0.5"
-                    style={{ color: "#b45309" }}
-                  >
-                    ”
-                  </span>
-                </p>
-                {attribution && (
-                  <p
-                    className="mono mt-2 truncate text-[11px] tracking-[0.04em]"
-                    style={{ color: "#a1a1aa" }}
-                  >
-                    — on “{attribution}”
-                  </p>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key={loading ? "thinking" : "idle"}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-3"
-              >
-                <ThinkingDots />
-                <span
-                  className="mono text-[12px] tracking-[0.14em]"
-                  style={{ color: "#71717a" }}
-                >
-                  {loading
-                    ? "AI IS READING THE BOARD…"
-                    : "AWAITING NEXT DIGEST"}
+                <span aria-hidden className="mr-0.5" style={{ color: "#b45309" }}>
+                  “
                 </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {text}
+                <span aria-hidden className="ml-0.5" style={{ color: "#b45309" }}>
+                  ”
+                </span>
+              </p>
+              {attribution && (
+                <p
+                  className="mono mt-2 truncate text-[11px] tracking-[0.04em]"
+                  style={{ color: "#a1a1aa" }}
+                >
+                  — on “{attribution}”
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <ThinkingDots />
+              <span
+                className="mono text-[12px] tracking-[0.14em]"
+                style={{ color: "#71717a" }}
+              >
+                {loading
+                  ? "AI IS READING THE BOARD…"
+                  : "AWAITING NEXT DIGEST"}
+              </span>
+            </div>
+          )}
         </div>
-      </motion.div>
+      </div>
+
+      <style>{`
+        @keyframes pt-dot {
+          0%, 100% { opacity: 0.25; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -135,16 +119,13 @@ function ThinkingDots() {
   return (
     <div className="flex items-center gap-1.5">
       {[0, 1, 2].map((i) => (
-        <motion.span
+        <span
           key={i}
           className="block h-1.5 w-1.5 rounded-full"
-          style={{ background: "#b45309" }}
-          animate={{ opacity: [0.25, 1, 0.25] }}
-          transition={{
-            duration: 1.2,
-            repeat: Infinity,
-            delay: i * 0.18,
-            ease: "easeInOut",
+          style={{
+            background: "#b45309",
+            opacity: 0.6,
+            animation: `pt-dot 1.2s ease-in-out ${i * 0.18}s infinite`,
           }}
         />
       ))}

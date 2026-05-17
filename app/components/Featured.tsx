@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import type { AIPrediction, Category } from "@/app/lib/ai";
 import type { ScoredMarket } from "@/app/lib/types";
 import { Verdict } from "./Verdict";
@@ -57,13 +56,7 @@ export function Featured({ market, prediction, category }: Props) {
         : 0.35;
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mx-auto max-w-[1200px] px-8 pb-1.5"
-    >
+    <div className="mx-auto max-w-[1200px] px-8 pb-1.5">
       <div
         className="relative overflow-hidden rounded-[20px]"
         style={{
@@ -261,7 +254,7 @@ export function Featured({ market, prediction, category }: Props) {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
