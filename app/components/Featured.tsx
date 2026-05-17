@@ -100,47 +100,74 @@ export function Featured({ market, prediction, category }: Props) {
           }}
         />
 
-        <div className="relative grid gap-8 px-8 py-7 lg:grid-cols-[1fr_minmax(0,360px)]">
-          {/* Left column */}
-          <div>
-            <div className="mb-[18px] flex flex-wrap items-center gap-2">
-              <span
-                className="mono rounded px-[9px] py-[3px] text-[10px] font-extrabold tracking-[0.14em]"
-                style={{
-                  color: "var(--amber)",
-                  background: "rgba(180,83,9,0.2)",
-                }}
-              >
-                ★ #1 TOP MOVER
-              </span>
-              {category && (
-                <span
-                  className="mono text-[10px] tracking-[0.13em]"
-                  style={{ color: "rgba(255,255,255,0.28)" }}
-                >
-                  {category.toUpperCase()}
-                </span>
-              )}
-              <span
-                className="mono ml-auto text-[10px]"
-                style={{ color: "rgba(255,255,255,0.2)" }}
-              >
-                {formatHours(hours).toUpperCase()} LEFT · SCORE {score}
-              </span>
-            </div>
-
-            {/* Question */}
-            <div
-              className="mb-[22px] text-[30px] font-bold leading-[1.22] tracking-[-0.01em]"
+        <div className="relative flex flex-col gap-6 px-8 py-7">
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="mono rounded px-[9px] py-[3px] text-[10px] font-extrabold tracking-[0.14em]"
               style={{
-                color: "rgba(255,255,255,0.95)",
-                textWrap: "pretty" as never,
+                color: "var(--amber)",
+                background: "rgba(180,83,9,0.2)",
               }}
             >
-              {market.question}
-            </div>
+              ★ #1 TOP MOVER
+            </span>
+            {category && (
+              <span
+                className="mono text-[10px] tracking-[0.13em]"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
+                {category.toUpperCase()}
+              </span>
+            )}
+            <span
+              className="mono ml-auto text-[10px]"
+              style={{ color: "rgba(255,255,255,0.35)" }}
+            >
+              {formatHours(hours).toUpperCase()} LEFT · SCORE {score}
+            </span>
+          </div>
 
-            {/* Verdict (dark) */}
+          {/* Question — full width hero */}
+          <div
+            className="text-[28px] font-bold leading-[1.2] tracking-[-0.01em] sm:text-[32px]"
+            style={{
+              color: "rgba(255,255,255,0.97)",
+              textWrap: "pretty" as never,
+            }}
+          >
+            {market.question}
+          </div>
+
+          {/* Chart — full-width hero band, not crammed in a side column */}
+          <FeaturedChart market={market} color={color} />
+
+          {/* Stat ribbon — full width row of 4 cells */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Stat
+              label="MOMENTUM"
+              value={`${momentum >= 0 ? "↑" : "↓"}${Math.abs(momentum).toFixed(1)}¢/h`}
+              color={color}
+            />
+            <Stat
+              label="24H VOL"
+              value={
+                market.volume24hr >= 1_000_000
+                  ? `$${(market.volume24hr / 1_000_000).toFixed(1)}M`
+                  : `$${(market.volume24hr / 1_000).toFixed(0)}K`
+              }
+              color="rgba(255,255,255,0.85)"
+            />
+            <Stat label="SCORE" value={`${score}/100`} color="var(--amber)" />
+            <Stat
+              label="CONFIDENCE"
+              value={`${Math.round(confDecimal * 100)}%`}
+              color={color}
+            />
+          </div>
+
+          {/* Analysis: verdict + thesis side-by-side on lg screens */}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
             {prediction ? (
               <Verdict
                 prediction={prediction}
@@ -162,15 +189,11 @@ export function Featured({ market, prediction, category }: Props) {
               </div>
             )}
 
-            {/* AI Thesis */}
             {prediction?.thesis && (
-              <div
-                className="mt-5 pl-4"
-                style={{ borderLeft: `3px solid ${color}45` }}
-              >
+              <div className="pl-4" style={{ borderLeft: `3px solid ${color}55` }}>
                 <div
                   className="mono mb-2 text-[9px] font-bold tracking-[0.18em]"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
+                  style={{ color: "rgba(255,255,255,0.5)" }}
                 >
                   AI THESIS
                 </div>
@@ -182,7 +205,7 @@ export function Featured({ market, prediction, category }: Props) {
                       color:
                         i === 1
                           ? "rgba(255,255,255,0.92)"
-                          : "rgba(255,255,255,0.7)",
+                          : "rgba(255,255,255,0.72)",
                       fontStyle: i === 1 ? "italic" : "normal",
                       fontWeight: i === 1 ? 500 : 400,
                       marginBottom: i < arr.length - 1 ? 8 : 0,
@@ -195,64 +218,33 @@ export function Featured({ market, prediction, category }: Props) {
             )}
           </div>
 
-          {/* Right column */}
-          <div className="flex flex-col gap-2.5">
-            <FeaturedChart market={market} color={color} />
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <Stat
-                label="MOMENTUM"
-                value={`${momentum >= 0 ? "↑" : "↓"}${Math.abs(momentum).toFixed(1)}¢/h`}
-                color={color}
-              />
-              <Stat
-                label="24H VOL"
-                value={
-                  market.volume24hr >= 1_000_000
-                    ? `$${(market.volume24hr / 1_000_000).toFixed(1)}M`
-                    : `$${(market.volume24hr / 1_000).toFixed(0)}K`
-                }
-                color="rgba(255,255,255,0.65)"
-              />
-              <Stat
-                label="SCORE"
-                value={`${score}/100`}
-                color="var(--amber)"
-              />
-              <Stat
-                label="CONFIDENCE"
-                value={`${Math.round(confDecimal * 100)}%`}
-                color={color}
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="flex-1 cursor-pointer rounded-lg py-[11px] text-[12.5px] font-medium transition-colors"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.85)",
-                }}
-              >
-                Why this? →
-              </button>
-              <a
-                href={polymarketUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 cursor-pointer rounded-lg py-[11px] text-center text-[12.5px] font-semibold no-underline transition-transform hover:scale-[1.02]"
-                style={{
-                  background: `linear-gradient(180deg, ${color}, ${color}d0)`,
-                  border: `1px solid ${color}`,
-                  color: "#fff",
-                  boxShadow: `0 4px 16px ${color}40, inset 0 1px 0 rgba(255,255,255,0.18)`,
-                }}
-              >
-                Open Polymarket ↗
-              </a>
-            </div>
+          {/* Action buttons — full width, span the card */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="flex-1 cursor-pointer rounded-lg py-[11px] text-[12.5px] font-medium transition-colors hover:bg-white/[0.09]"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.88)",
+              }}
+            >
+              Why this? →
+            </button>
+            <a
+              href={polymarketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 cursor-pointer rounded-lg py-[11px] text-center text-[12.5px] font-semibold no-underline transition-transform hover:scale-[1.01]"
+              style={{
+                background: `linear-gradient(180deg, ${color}, ${color}d0)`,
+                border: `1px solid ${color}`,
+                color: "#fff",
+                boxShadow: `0 4px 16px ${color}40, inset 0 1px 0 rgba(255,255,255,0.18)`,
+              }}
+            >
+              Open on Polymarket ↗
+            </a>
           </div>
         </div>
       </div>
