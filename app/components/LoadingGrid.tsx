@@ -1,79 +1,83 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 /**
  * Loading state shown on first paint before the markets API has returned.
- * Gives the page real structure (a status banner + skeleton cards) so the
- * empty state doesn't look broken.
+ * Plain CSS only — no framer-motion. We've seen the motion wrappers fail
+ * to animate to visible in some hydration states, leaving the grid invisible.
  */
 export function LoadingGrid({ count = 9 }: { count?: number }) {
   return (
     <div className="mx-auto w-full max-w-[1200px] px-8">
       {/* Status banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+      <div
         className="mb-5 flex items-center gap-3 overflow-hidden rounded-xl px-5 py-3.5"
         style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
+          background: "#ffffff",
+          border: "1px solid #e6e3dc",
           boxShadow:
             "inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
         <ThinkingDots />
         <div className="flex flex-col gap-0.5 leading-tight">
-          <span
-            className="mono text-[11px] font-bold tracking-[0.14em]"
-            style={{ color: "var(--text)" }}
-          >
+          <span className="mono text-[11px] font-bold tracking-[0.14em] text-zinc-900">
             SCANNING POLYMARKET
           </span>
-          <span
-            className="mono text-[10px] tracking-[0.1em]"
-            style={{ color: "var(--faint)" }}
-          >
+          <span className="mono text-[10px] tracking-[0.1em] text-zinc-500">
             Fetching live markets · this only takes a few seconds
           </span>
         </div>
         <div className="ml-auto hidden items-center gap-1.5 sm:flex">
-          <div
-            aria-hidden
-            className="h-1.5 w-1.5 rounded-full ppulse"
-            style={{ background: "#10b981" }}
-          />
           <span
-            className="mono text-[10px] tracking-[0.12em]"
-            style={{ color: "var(--faint)" }}
-          >
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-full"
+            style={{
+              background: "#10b981",
+              boxShadow: "0 0 0 3px rgba(16,185,129,0.2)",
+              animation: "lg-pulse 1.6s ease-in-out infinite",
+            }}
+          />
+          <span className="mono text-[10px] tracking-[0.12em] text-zinc-500">
             POLLING gamma-api
           </span>
         </div>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: count }).map((_, i) => (
-          <SkeletonCard key={i} delay={i * 40} />
+          <SkeletonCard key={i} />
         ))}
       </div>
+
+      <style>{`
+        @keyframes lg-pulse {
+          0%, 100% { opacity: 0.55; }
+          50% { opacity: 1; }
+        }
+        @keyframes lg-dot {
+          0%, 100% { opacity: 0.25; }
+          50% { opacity: 1; }
+        }
+        @keyframes lg-fade-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
 
-function SkeletonCard({ delay = 0 }: { delay?: number }) {
+function SkeletonCard() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: delay / 1000, duration: 0.35, ease: "easeOut" }}
+    <div
       className="relative overflow-hidden rounded-2xl"
       style={{
         background: "linear-gradient(180deg, #ffffff 0%, #fcfbf8 100%)",
-        border: "1px solid var(--border)",
+        border: "1px solid #e6e3dc",
         boxShadow:
           "inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.04), 0 4px 14px -2px rgba(0,0,0,0.06)",
+        opacity: 1,
+        animation: "lg-fade-in 0.4s ease-out",
       }}
     >
       <div
@@ -128,15 +132,12 @@ function SkeletonCard({ delay = 0 }: { delay?: number }) {
           <div className="skeleton h-3 flex-1 rounded" />
         </div>
         {/* footer buttons */}
-        <div
-          className="flex gap-2 pt-3"
-          style={{ borderTop: "1px solid var(--border)" }}
-        >
+        <div className="flex gap-2 pt-3" style={{ borderTop: "1px solid #e6e3dc" }}>
           <div className="skeleton h-7 flex-1 rounded-md" />
           <div className="skeleton h-7 flex-1 rounded-md" />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -144,16 +145,13 @@ function ThinkingDots() {
   return (
     <div className="flex items-center gap-1.5">
       {[0, 1, 2].map((i) => (
-        <motion.span
+        <span
           key={i}
           className="block h-1.5 w-1.5 rounded-full"
-          style={{ background: "#10b981" }}
-          animate={{ opacity: [0.25, 1, 0.25] }}
-          transition={{
-            duration: 1.2,
-            repeat: Infinity,
-            delay: i * 0.18,
-            ease: "easeInOut",
+          style={{
+            background: "#10b981",
+            opacity: 0.6,
+            animation: `lg-dot 1.2s ease-in-out ${i * 0.18}s infinite`,
           }}
         />
       ))}
