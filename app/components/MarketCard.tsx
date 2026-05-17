@@ -218,6 +218,10 @@ export function MarketCard({
                 fontWeight: urgent ? 700 : 400,
               }}
               title={market.endDate ?? undefined}
+              // Time-left text depends on Date.now() and may differ by a
+              // minute between SSR and hydration. The client value is what
+              // matters; suppress the noisy warning.
+              suppressHydrationWarning
             >
               {formatHours(hours)}
             </span>

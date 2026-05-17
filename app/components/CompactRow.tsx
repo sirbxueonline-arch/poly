@@ -120,6 +120,7 @@ export function CompactRow({ market, rank, prediction }: Props) {
         className="mono min-w-[28px] text-right text-[10px]"
         style={{ color: "var(--faint)" }}
         title={market.endDate ?? undefined}
+        suppressHydrationWarning
       >
         {formatHours(hours)}
       </span>

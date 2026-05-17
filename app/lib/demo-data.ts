@@ -169,11 +169,21 @@ const SEEDS: Seed[] = [
 ];
 
 /**
- * Build a synthetic endDate string `hours` from now (so the time-left chip
- * matches the design's spec for each row).
+ * Build a synthetic endDate string `hours` from a FIXED reference time.
+ *
+ * We can't use `Date.now()` here because this module runs once on the server
+ * (at SSR time) and again on the client (at hydration time). The two calls
+ * return values that differ by however long it took to ship the HTML, which
+ * causes React's hydration to mismatch on the time-left `<span>`.
+ *
+ * Pinning to a fixed UTC instant guarantees identical strings on both sides.
+ * Demo data is just a first-paint placeholder — real Polymarket data swaps
+ * in within seconds, so the fact that this epoch slowly drifts behind "now"
+ * is fine.
  */
+const DEMO_EPOCH_MS = Date.UTC(2026, 4, 17, 12, 0, 0); // 2026-05-17 12:00 UTC
 function endDateFromHours(hours: number): string {
-  return new Date(Date.now() + hours * 3_600_000).toISOString();
+  return new Date(DEMO_EPOCH_MS + hours * 3_600_000).toISOString();
 }
 
 export const DEMO_MARKETS: ScoredMarket[] = SEEDS.map((s) => ({
