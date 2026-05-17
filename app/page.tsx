@@ -417,8 +417,14 @@ export default function Page() {
     (m) => ai.predictions[m.id]?.pick === "No" && m.id !== featuredId,
   );
 
+  const hasMarkets = markets.length > 0;
+  const showChrome = hasMarkets;
+
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
+    <div
+      className="flex min-h-screen flex-col pb-20"
+      style={{ background: "var(--bg)" }}
+    >
       <Header
         tick={tick}
         secondsToNext={secondsToNext}
@@ -431,8 +437,13 @@ export default function Page() {
         lastDigestAt={ai.lastDigestAt}
       />
 
-      {/* Hero */}
-      <div className="mx-auto max-w-[1200px] px-8 pb-6 pt-12">
+      <div className="flex flex-1 flex-col">
+      {/* Hero — scales down when there's no data yet so it doesn't dominate */}
+      <div
+        className={`mx-auto w-full max-w-[1200px] px-8 ${
+          hasMarkets ? "pb-6 pt-12" : "pb-5 pt-10"
+        }`}
+      >
         <div
           className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-[5px]"
           style={{
@@ -453,7 +464,9 @@ export default function Page() {
           </span>
         </div>
         <h1
-          className="mono mb-2 text-[48px] font-extrabold leading-[1.1] tracking-[-0.03em]"
+          className={`mono mb-2 font-extrabold leading-[1.05] tracking-[-0.03em] ${
+            hasMarkets ? "text-[48px]" : "text-[36px] sm:text-[40px]"
+          }`}
           style={{ color: "var(--text)" }}
         >
           Top movers,
@@ -570,25 +583,29 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...`}
         attribution={featured?.question ?? null}
       />
 
-      <StatsStrip
-        tracking={markets.length}
-        buyYes={pickStats.buyYes}
-        buyNo={pickStats.buyNo}
-        pass={pickStats.pass}
-        avgEdgeCents={pickStats.avgEdgeCents}
-        tick={tick}
-        filter={filter}
-        onFilterChange={setFilter}
-      />
+      {showChrome && (
+        <>
+          <StatsStrip
+            tracking={markets.length}
+            buyYes={pickStats.buyYes}
+            buyNo={pickStats.buyNo}
+            pass={pickStats.pass}
+            avgEdgeCents={pickStats.avgEdgeCents}
+            tick={tick}
+            filter={filter}
+            onFilterChange={setFilter}
+          />
 
-      <Controls
-        sort={sortBy}
-        onSortChange={setSortBy}
-        time={timeFilter}
-        onTimeChange={setTimeFilter}
-        density={density}
-        onDensityChange={setDensity}
-      />
+          <Controls
+            sort={sortBy}
+            onSortChange={setSortBy}
+            time={timeFilter}
+            onTimeChange={setTimeFilter}
+            density={density}
+            onDensityChange={setDensity}
+          />
+        </>
+      )}
 
       {/* Loading skeleton — first paint, before any markets have arrived */}
       {!isError && markets.length === 0 && !setupNotice && (
@@ -819,6 +836,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...`}
           attribution={oneMoreMarket.question}
         />
       )}
+      </div>{/* end flex-1 content wrapper */}
 
       <Footer tick={tick} />
 
