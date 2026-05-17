@@ -13,13 +13,19 @@ import {
 import { Featured } from "./components/Featured";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
-import { LoadingGrid } from "./components/LoadingGrid";
 import { MarketCard } from "./components/MarketCard";
 import { PulseTake } from "./components/PulseTake";
 import { SectionDivider } from "./components/SectionDivider";
 import { StatsStrip, type PickFilter } from "./components/StatsStrip";
 import { StickyPill } from "./components/StickyPill";
 import type { AIPrediction, Category } from "./lib/ai";
+import {
+  DEMO_CATEGORIES,
+  DEMO_MARKETS,
+  DEMO_PREDICTIONS,
+  DEMO_PULSE_TAKE,
+  DEMO_REASONS,
+} from "./lib/demo-data";
 import { buildPriceMap, scoreMarkets } from "./lib/score";
 import type { RawMarket, ScoredMarket } from "./lib/types";
 
@@ -97,13 +103,36 @@ const EMPTY_AI: AIState = {
   hydrated: false,
 };
 
+/**
+ * Initial AI state seeded with demo predictions so the page looks fully
+ * populated on first paint. Real data from /api/predictions replaces this
+ * once it lands.
+ */
+const DEMO_AI: AIState = {
+  pulseTake: DEMO_PULSE_TAKE,
+  reasons: DEMO_REASONS,
+  categories: DEMO_CATEGORIES,
+  predictions: DEMO_PREDICTIONS,
+  refreshing: false,
+  activeWorkers: 0,
+  lastDigestAt: null,
+  nextDigestAt: null,
+  refreshIntervalMs: 5 * 60 * 1000,
+  configured: true,
+  hydrated: false,
+};
+
 export default function Page() {
-  const [markets, setMarkets] = useState<ScoredMarket[]>([]);
+  // Seed with demo data so the dashboard looks like the design from the very
+  // first paint. Real market + prediction data replaces these arrays as soon
+  // as the APIs return. `isDemo` flips to false the moment we get real data.
+  const [markets, setMarkets] = useState<ScoredMarket[]>(DEMO_MARKETS);
+  const [isDemo, setIsDemo] = useState(true);
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [trackedCount, setTrackedCount] = useState(0);
-  const [ai, setAi] = useState<AIState>(EMPTY_AI);
+  const [trackedCount, setTrackedCount] = useState(DEMO_MARKETS.length);
+  const [ai, setAi] = useState<AIState>(DEMO_AI);
   const [filter, setFilter] = useState<PickFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("any");
   const [sortBy, setSortBy] = useState<SortKey>("score");
@@ -141,8 +170,12 @@ export default function Page() {
       const scored = scoreMarkets(data, prevPricesRef.current);
       prevPricesRef.current = buildPriceMap(data);
 
-      setMarkets(scored);
-      setTrackedCount(data.length);
+      if (scored.length > 0) {
+        // Real data has arrived — switch off demo mode permanently.
+        setMarkets(scored);
+        setTrackedCount(data.length);
+        setIsDemo(false);
+      }
       setStatus("ok");
       setErrorMessage(null);
       setTick((t) => t + 1);
@@ -173,6 +206,23 @@ export default function Page() {
         setSetupNotice(data.configurationHelp ?? "Supabase not configured");
       } else {
         setSetupNotice(null);
+      }
+
+      // If the server returned 0 predictions (cache empty, refresh in flight,
+      // or Supabase not configured), keep showing the demo AI state. Only
+      // overwrite when we actually have real predictions to display.
+      if (data.predictions.length === 0) {
+        // Still surface server-side refresh metadata for the header countdown
+        setAi((prev) => ({
+          ...prev,
+          refreshing: data.refreshing,
+          activeWorkers: data.activeWorkers,
+          lastDigestAt: data.lastDigestAt,
+          nextDigestAt: data.nextDigestAt,
+          refreshIntervalMs: data.refreshIntervalMs,
+          configured: !data.notConfigured,
+        }));
+        return;
       }
 
       const reasons: Record<string, string> = {};
@@ -607,9 +657,53 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...`}
         </>
       )}
 
-      {/* Loading skeleton — first paint, before any markets have arrived */}
-      {!isError && markets.length === 0 && !setupNotice && (
-        <LoadingGrid count={9} />
+      {/* Demo-mode notice ribbon — visible until real Polymarket data arrives */}
+      {isDemo && !setupNotice && (
+        <div className="mx-auto max-w-[1200px] px-8 pb-5">
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-xl px-5 py-3"
+            style={{
+              background: "#fbfaf6",
+              border: "1px dashed #d6d3c9",
+            }}
+          >
+            <span
+              className="mono inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-[0.14em]"
+              style={{
+                background: "#0a0a0a",
+                color: "#fbbf24",
+              }}
+            >
+              ⚙ DEMO MODE
+            </span>
+            <span
+              className="text-[13px]"
+              style={{ color: "var(--text)" }}
+            >
+              Showing sample markets while we fetch live data from Polymarket.
+            </span>
+            <span
+              className="mono ml-auto inline-flex items-center gap-1.5 text-[11px] tracking-[0.1em]"
+              style={{ color: "var(--faint)" }}
+            >
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 rounded-full"
+                style={{
+                  background: "#10b981",
+                  animation: "lg-pulse 1.6s ease-in-out infinite",
+                }}
+              />
+              POLLING gamma-api
+            </span>
+          </div>
+          <style>{`
+            @keyframes lg-pulse {
+              0%, 100% { opacity: 0.55; }
+              50% { opacity: 1; }
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Featured card */}
