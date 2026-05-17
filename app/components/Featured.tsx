@@ -100,7 +100,7 @@ export function Featured({ market, prediction, category }: Props) {
           }}
         />
 
-        <div className="relative flex flex-col gap-6 px-8 py-7">
+        <div className="relative flex flex-col gap-5 px-7 py-6">
           {/* Meta row */}
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -190,10 +190,18 @@ export function Featured({ market, prediction, category }: Props) {
             )}
 
             {prediction?.thesis && (
-              <div className="pl-4" style={{ borderLeft: `3px solid ${color}55` }}>
+              <div
+                className="rounded-lg px-5 py-4"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderLeft: `3px solid ${color}`,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+                }}
+              >
                 <div
                   className="mono mb-2 text-[9px] font-bold tracking-[0.18em]"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: "rgba(255,255,255,0.55)" }}
                 >
                   AI THESIS
                 </div>
@@ -204,8 +212,8 @@ export function Featured({ market, prediction, category }: Props) {
                     style={{
                       color:
                         i === 1
-                          ? "rgba(255,255,255,0.92)"
-                          : "rgba(255,255,255,0.72)",
+                          ? "rgba(255,255,255,0.94)"
+                          : "rgba(255,255,255,0.76)",
                       fontStyle: i === 1 ? "italic" : "normal",
                       fontWeight: i === 1 ? 500 : 400,
                       marginBottom: i < arr.length - 1 ? 8 : 0,
@@ -263,16 +271,23 @@ function Stat({
 }) {
   return (
     <div
-      className="rounded-lg px-2.5 py-2"
-      style={{ background: "rgba(255,255,255,0.04)" }}
+      className="rounded-lg px-3 py-2.5"
+      style={{
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+      }}
     >
       <div
-        className="mono mb-[3px] text-[8px] tracking-[0.14em]"
-        style={{ color: "rgba(255,255,255,0.22)" }}
+        className="mono mb-1 text-[9px] font-bold tracking-[0.16em]"
+        style={{ color: "rgba(255,255,255,0.5)" }}
       >
         {label}
       </div>
-      <div className="mono text-[15px] font-bold" style={{ color }}>
+      <div
+        className="mono text-[18px] font-extrabold leading-none"
+        style={{ color }}
+      >
         {value}
       </div>
     </div>
@@ -290,7 +305,7 @@ function FeaturedChart({
   const points = useSyntheticSeries(market.id, yesPrice);
   // SVG drawing area — leave 32px on the right for axis labels.
   const W = 360;
-  const H = 220;
+  const H = 180;
   const chartW = W - 36;
   const pathD = pointsToPath(points, chartW, H);
   const fillD = `${pathD} L${chartW},${H} L0,${H} Z`;
@@ -313,11 +328,11 @@ function FeaturedChart({
       className="relative flex-1 overflow-hidden rounded-xl"
       style={{
         background:
-          "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)",
-        border: "1px solid rgba(255,255,255,0.08)",
+          "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
+        border: "1px solid rgba(255,255,255,0.14)",
         boxShadow:
-          "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.2)",
-        minHeight: 220,
+          "inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 12px rgba(0,0,0,0.25)",
+        minHeight: 180,
       }}
     >
       <svg
