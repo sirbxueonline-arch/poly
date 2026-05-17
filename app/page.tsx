@@ -551,47 +551,33 @@ export default function Page() {
                 className="mono mb-2 text-[11px] font-extrabold tracking-[0.18em]"
                 style={{ color: "var(--amber)" }}
               >
-                ⚙ SETUP REQUIRED · SUPABASE NOT CONFIGURED
+                ⚙ SETUP REQUIRED · OPENAI KEY MISSING
               </div>
               <h3
                 className="mb-3 text-[20px] font-bold leading-tight"
                 style={{ color: "var(--text)" }}
               >
-                The dashboard needs a database to remember AI predictions
-                across reloads.
+                Add your OpenAI API key so the analyst can call markets.
               </h3>
               <ol
                 className="mb-4 list-decimal space-y-1.5 pl-5 text-[13.5px] leading-[1.55]"
                 style={{ color: "var(--text)" }}
               >
                 <li>
-                  Create a project at{" "}
+                  Grab a key at{" "}
                   <a
-                    href="https://supabase.com"
+                    href="https://platform.openai.com/api-keys"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline-offset-2 hover:underline"
                     style={{ color: "var(--amber)" }}
                   >
-                    supabase.com
+                    platform.openai.com/api-keys
                   </a>
                   .
                 </li>
                 <li>
-                  Open the SQL editor and run{" "}
-                  <code
-                    className="rounded px-1 py-0.5 text-[12px]"
-                    style={{
-                      background: "rgba(255,255,255,0.6)",
-                      color: "var(--text)",
-                    }}
-                  >
-                    supabase/schema.sql
-                  </code>{" "}
-                  from this repo.
-                </li>
-                <li>
-                  Add these to{" "}
+                  Add it to{" "}
                   <code
                     className="rounded px-1 py-0.5 text-[12px]"
                     style={{
@@ -601,8 +587,9 @@ export default function Page() {
                   >
                     .env.local
                   </code>{" "}
-                  and restart the dev server:
+                  in the project root:
                 </li>
+                <li>Restart the dev server (<code className="mono">npm run dev</code>).</li>
               </ol>
               <pre
                 className="mono overflow-x-auto rounded-lg p-3 text-[12px] leading-[1.6]"
@@ -611,15 +598,14 @@ export default function Page() {
                   color: "rgba(255,255,255,0.9)",
                 }}
               >
-                {`SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...`}
+                {`OPENAI_API_KEY=sk-proj-...`}
               </pre>
               <p
                 className="mono mt-3 text-[11px]"
                 style={{ color: "var(--muted)" }}
               >
-                Get both from Supabase → Settings → API. Use the
-                service-role key, not anon.
+                No database required. Predictions live in server memory and
+                refresh themselves every 5 minutes.
               </p>
             </div>
           </div>

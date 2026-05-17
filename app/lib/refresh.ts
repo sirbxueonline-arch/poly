@@ -3,7 +3,6 @@ import "server-only";
 import {
   getMeta,
   getMetaNumber,
-  isConfigured as isDbConfigured,
   pruneStalePredictions,
   setMeta,
   upsertPredictions,
@@ -45,15 +44,15 @@ export type RefreshState = {
   pulseTake: string | null;
 };
 
-export async function getRefreshState(): Promise<RefreshState> {
-  const lastFromDb = await getMetaNumber("last_digest_at");
-  if (lastFromDb > 0) lastDigestAtCache = lastFromDb;
+export function getRefreshState(): RefreshState {
+  const lastFromStore = getMetaNumber("last_digest_at");
+  if (lastFromStore > 0) lastDigestAtCache = lastFromStore;
   return {
     refreshing: refreshInFlight,
     activeWorkers,
     lastDigestAt: lastDigestAtCache,
     nextDigestAt: lastDigestAtCache + REFRESH_INTERVAL_MS,
-    pulseTake: await getMeta("pulse_take"),
+    pulseTake: getMeta("pulse_take"),
   };
 }
 
@@ -65,7 +64,7 @@ export async function getRefreshState(): Promise<RefreshState> {
  */
 export function maybeKickOffRefresh(): boolean {
   if (refreshInFlight) return false;
-  if (!isDbConfigured()) return false;
+  if (!process.env.OPENAI_API_KEY) return false;
   if (Date.now() - lastDigestAtCache < REFRESH_INTERVAL_MS) return false;
 
   refreshInFlight = true;
@@ -107,10 +106,6 @@ async function runRefresh(): Promise<void> {
     console.warn("[refresh] OPENAI_API_KEY missing — skipping AI work");
     return;
   }
-  if (!isDbConfigured()) {
-    console.warn("[refresh] Supabase not configured — skipping refresh");
-    return;
-  }
 
   console.log("[refresh] starting");
   const t0 = Date.now();
@@ -123,8 +118,8 @@ async function runRefresh(): Promise<void> {
   }
 
   // 2. Score against previously stored prices (momentum stays meaningful
-  //    across the 5-minute window because we persist the last price map).
-  const priorPrices = await loadPriorPriceMap();
+  //    across the 5-minute window because we keep the last price map in memory).
+  const priorPrices = loadPriorPriceMap();
   const scored = scoreMarkets(raws, priorPrices);
   if (scored.length === 0) {
     console.warn("[refresh] no scoreable markets after filtering");
@@ -136,7 +131,7 @@ async function runRefresh(): Promise<void> {
 
   // 3. Persist the new price map for next refresh's momentum calc
   const priceMap = buildPriceMap(raws);
-  await savePriceMap(priceMap);
+  savePriceMap(priceMap);
 
   // 4. Chunk and fan out parallel OpenAI workers
   const batches: (typeof top)[] = [];
@@ -218,19 +213,17 @@ async function runRefresh(): Promise<void> {
     ];
   });
 
-  await upsertPredictions(rows);
+  upsertPredictions(rows);
 
-  // 6. Meta — written in parallel to save a couple round trips
+  // 6. Meta
   const now = Date.now();
   lastDigestAtCache = now;
-  await Promise.all([
-    pulseTakeOut ? setMeta("pulse_take", pulseTakeOut) : Promise.resolve(),
-    setMeta("last_digest_at", String(now)),
-    setMeta("last_market_count", String(top.length)),
-  ]);
+  if (pulseTakeOut) setMeta("pulse_take", pulseTakeOut);
+  setMeta("last_digest_at", String(now));
+  setMeta("last_market_count", String(top.length));
 
   // 7. GC any rows we haven't touched in a day
-  await pruneStalePredictions();
+  pruneStalePredictions();
 
   console.log(
     `[refresh] complete — ${rows.length} predictions in ${(Date.now() - t0) / 1000}s`,
@@ -267,8 +260,8 @@ async function fetchPolymarketMarkets(): Promise<RawMarket[]> {
  * Price-map persistence (for momentum tracking across refreshes)
  * ─────────────────────────────────────────────────────────────────────── */
 
-async function loadPriorPriceMap(): Promise<Map<string, number[]>> {
-  const raw = await getMeta("last_price_map");
+function loadPriorPriceMap(): Map<string, number[]> {
+  const raw = getMeta("last_price_map");
   if (!raw) return new Map();
   try {
     const obj = JSON.parse(raw) as Record<string, number[]>;
@@ -278,8 +271,8 @@ async function loadPriorPriceMap(): Promise<Map<string, number[]>> {
   }
 }
 
-async function savePriceMap(map: Map<string, number[]>): Promise<void> {
+function savePriceMap(map: Map<string, number[]>): void {
   const obj: Record<string, number[]> = {};
   for (const [k, v] of map.entries()) obj[k] = v;
-  await setMeta("last_price_map", JSON.stringify(obj));
+  setMeta("last_price_map", JSON.stringify(obj));
 }

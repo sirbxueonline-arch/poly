@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   type AIPrediction,
   type Category,
@@ -10,45 +9,20 @@ import {
 } from "./ai";
 
 /* ─────────────────────────────────────────────────────────────────────────
- * Supabase client
+ * IN-MEMORY STORE
  *
- * Reads use the anon key when available, writes use the service-role key
- * (which bypasses RLS). The server holds both; the browser never imports
- * this file (the "server-only" guard at the top makes that a build error).
+ * Replaces the previous Supabase / SQLite backends. Predictions and meta
+ * live for the lifetime of the Node process. The 5-minute refresh job
+ * regenerates the cache, so persistence isn't strictly necessary — if the
+ * dev server restarts, a fresh refresh fires on the first request.
+ *
+ * The exported API is intentionally sync now (no `await`s in callers).
  * ─────────────────────────────────────────────────────────────────────── */
 
-let _client: SupabaseClient | null = null;
-
-function client(): SupabaseClient {
-  if (_client) return _client;
-  const url = process.env.SUPABASE_URL;
-  // Prefer service role on the server so writes work. Fall back to anon for
-  // read-only setups, with a warning at first use.
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local.",
-    );
-  }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn(
-      "[db] SUPABASE_SERVICE_ROLE_KEY missing — falling back to anon key (writes will fail).",
-    );
-  }
-  _client = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  return _client;
-}
-
-/** Returns true if Supabase env vars are present. Used by routes to surface
- * a clear "not configured" message instead of throwing on every request. */
 export function isConfigured(): boolean {
-  return Boolean(
-    process.env.SUPABASE_URL &&
-      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY),
-  );
+  // The only required server-side env var is OPENAI_API_KEY. No database
+  // to configure.
+  return Boolean(process.env.OPENAI_API_KEY);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -71,73 +45,6 @@ export type StoredMarket = {
   updatedAt: number;
 };
 
-type Row = {
-  id: string;
-  question: string;
-  slug: string;
-  event_slug: string | null;
-  outcomes: unknown; // jsonb
-  yes_price: number;
-  no_price: number;
-  volume24hr: number;
-  end_date: string | null;
-  pick: string;
-  fair_value: number;
-  confidence: string;
-  thesis: string | null;
-  reason: string | null;
-  category: string | null;
-  updated_at: string; // ISO from Postgres timestamptz
-};
-
-function rowToMarket(r: Row): StoredMarket | null {
-  if (!isPick(r.pick) || !isConfidence(r.confidence)) return null;
-  const outcomes = Array.isArray(r.outcomes) ? r.outcomes.map(String) : [];
-  if (outcomes.length < 2) return null;
-  const updatedAt = Date.parse(r.updated_at);
-  return {
-    id: r.id,
-    question: r.question,
-    slug: r.slug,
-    eventSlug: r.event_slug,
-    outcomes,
-    yesPrice: r.yes_price,
-    noPrice: r.no_price,
-    volume24hr: r.volume24hr,
-    endDate: r.end_date,
-    prediction: {
-      pick: r.pick,
-      fairValue: r.fair_value,
-      confidence: r.confidence,
-      thesis: r.thesis ?? "",
-    },
-    reason: r.reason,
-    category: r.category && isCategory(r.category) ? r.category : null,
-    updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0,
-  };
-}
-
-export async function readAllPredictions(): Promise<StoredMarket[]> {
-  if (!isConfigured()) return [];
-  const { data, error } = await client()
-    .from("predictions")
-    .select(
-      "id, question, slug, event_slug, outcomes, yes_price, no_price, volume24hr, end_date, pick, fair_value, confidence, thesis, reason, category, updated_at",
-    )
-    .order("updated_at", { ascending: false });
-  if (error) {
-    console.warn("[db] readAllPredictions failed:", error.message);
-    return [];
-  }
-  const rows = (data ?? []) as Row[];
-  const out: StoredMarket[] = [];
-  for (const r of rows) {
-    const m = rowToMarket(r);
-    if (m) out.push(m);
-  }
-  return out;
-}
-
 export type UpsertInput = {
   id: string;
   question: string;
@@ -156,81 +63,74 @@ export type UpsertInput = {
   category: string | null;
 };
 
-export async function upsertPredictions(rows: UpsertInput[]): Promise<void> {
-  if (rows.length === 0) return;
-  if (!isConfigured()) return;
-  const now = new Date().toISOString();
-  const records = rows.map((r) => ({
+const predictionStore: Map<string, StoredMarket> = new Map();
+const metaStore: Map<string, string> = new Map();
+
+function rowToMarket(r: UpsertInput, updatedAt: number): StoredMarket | null {
+  if (!isPick(r.pick) || !isConfidence(r.confidence)) return null;
+  if (!Array.isArray(r.outcomes) || r.outcomes.length < 2) return null;
+  return {
     id: r.id,
     question: r.question,
     slug: r.slug,
-    event_slug: r.eventSlug,
-    outcomes: r.outcomes, // jsonb
-    yes_price: r.yesPrice,
-    no_price: r.noPrice,
+    eventSlug: r.eventSlug,
+    outcomes: r.outcomes.map(String),
+    yesPrice: r.yesPrice,
+    noPrice: r.noPrice,
     volume24hr: r.volume24hr,
-    end_date: r.endDate,
-    pick: r.pick,
-    fair_value: r.fairValue,
-    confidence: r.confidence,
-    thesis: r.thesis,
+    endDate: r.endDate,
+    prediction: {
+      pick: r.pick,
+      fairValue: r.fairValue,
+      confidence: r.confidence,
+      thesis: r.thesis ?? "",
+    },
     reason: r.reason,
-    category: r.category,
-    updated_at: now,
-  }));
-  const { error } = await client()
-    .from("predictions")
-    .upsert(records, { onConflict: "id" });
-  if (error) {
-    console.warn("[db] upsertPredictions failed:", error.message);
+    category: r.category && isCategory(r.category) ? r.category : null,
+    updatedAt,
+  };
+}
+
+export function readAllPredictions(): StoredMarket[] {
+  // Most-recent first
+  return [...predictionStore.values()].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+}
+
+export function upsertPredictions(rows: UpsertInput[]): void {
+  if (rows.length === 0) return;
+  const now = Date.now();
+  for (const r of rows) {
+    const m = rowToMarket(r, now);
+    if (m) predictionStore.set(m.id, m);
   }
 }
 
 /** Drop any prediction rows older than `cutoffMs` (default: 24h). */
-export async function pruneStalePredictions(
+export function pruneStalePredictions(
   cutoffMs = 24 * 60 * 60 * 1000,
-): Promise<void> {
-  if (!isConfigured()) return;
-  const cutoffIso = new Date(Date.now() - cutoffMs).toISOString();
-  const { error } = await client()
-    .from("predictions")
-    .delete()
-    .lt("updated_at", cutoffIso);
-  if (error) {
-    console.warn("[db] pruneStalePredictions failed:", error.message);
+): void {
+  const cutoff = Date.now() - cutoffMs;
+  for (const [id, m] of predictionStore.entries()) {
+    if (m.updatedAt < cutoff) predictionStore.delete(id);
   }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
- * Meta key/value (pulse take, last digest timestamp, etc.)
+ * Meta key/value (pulse take, last digest timestamp, price-map JSON)
  * ─────────────────────────────────────────────────────────────────────── */
 
-export async function getMeta(key: string): Promise<string | null> {
-  if (!isConfigured()) return null;
-  const { data, error } = await client()
-    .from("meta")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
-  if (error) {
-    console.warn(`[db] getMeta(${key}) failed:`, error.message);
-    return null;
-  }
-  return (data?.value as string | undefined) ?? null;
+export function getMeta(key: string): string | null {
+  return metaStore.get(key) ?? null;
 }
 
-export async function setMeta(key: string, value: string): Promise<void> {
-  if (!isConfigured()) return;
-  const { error } = await client()
-    .from("meta")
-    .upsert({ key, value }, { onConflict: "key" });
-  if (error) {
-    console.warn(`[db] setMeta(${key}) failed:`, error.message);
-  }
+export function setMeta(key: string, value: string): void {
+  metaStore.set(key, value);
 }
 
-export async function getMetaNumber(key: string): Promise<number> {
-  const v = await getMeta(key);
+export function getMetaNumber(key: string): number {
+  const v = getMeta(key);
   if (v === null) return 0;
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;

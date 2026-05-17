@@ -1,4 +1,4 @@
-import { isConfigured, readAllPredictions } from "@/app/lib/db";
+import { readAllPredictions } from "@/app/lib/db";
 import {
   REFRESH_INTERVAL_MS,
   forceRefresh,
@@ -9,12 +9,17 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Returns the cached AI predictions from Supabase. If the cache is older than
- * 5 minutes, kicks off a background refresh — the *next* request will pick up
- * the new data. This request always returns immediately.
+ * Returns the in-memory cached AI predictions. If the cache is older than
+ * 5 minutes, kicks off a background refresh — the *next* request will pick
+ * up the new data. This request always returns immediately.
+ *
+ * No database. Predictions live in Node-process memory and are regenerated
+ * by the refresh job on a 5-minute cadence (or on first request after a
+ * server restart).
  */
 export async function GET() {
-  if (!isConfigured()) {
+  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+  if (!hasOpenAI) {
     return Response.json(
       {
         predictions: [],
@@ -29,17 +34,15 @@ export async function GET() {
         kickedOffRefresh: false,
         notConfigured: true,
         configurationHelp:
-          "Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to .env.local, run supabase/schema.sql in the SQL editor, then restart the dev server.",
+          "Add OPENAI_API_KEY to .env.local and restart the dev server.",
       },
       { headers: { "cache-control": "no-store, max-age=0" } },
     );
   }
 
   const triggered = maybeKickOffRefresh();
-  const [predictions, state] = await Promise.all([
-    readAllPredictions(),
-    getRefreshState(),
-  ]);
+  const predictions = readAllPredictions();
+  const state = getRefreshState();
   const now = Date.now();
   const ageMs = state.lastDigestAt > 0 ? now - state.lastDigestAt : null;
   const msUntilNext =
@@ -68,5 +71,5 @@ export async function GET() {
  */
 export async function POST() {
   await forceRefresh();
-  return Response.json({ ok: true, state: await getRefreshState() });
+  return Response.json({ ok: true, state: getRefreshState() });
 }
